@@ -49,9 +49,9 @@ class CSSE(object):
         self.cros_proba = cros_proba
         self.mutation_proba = mutation_proba
         #Objective function parameters
-        self.L1 = L1
-        self.L2 = L2
-        self.L3 = L3 
+        self.L1 = L1 #weight assigned the distance to the original instance
+        self.L2 = L2 #weight assigned the amount of changes needed in the original instance
+        self.L3 = L3 #weight assigned to distance for counterfactual class
         #Algorithm
         self.algorithm = algorithm
            
@@ -121,12 +121,8 @@ class CSSE(object):
     
         i = 0
         while i < len(evaluation):
-            #if evaluation[i].score < base_value:
             evaluation[i].aval_norm = self.L1*aval_norma2[i,0] + self.L2*aval_norma2[i,1] + self.L3*aval_norma2[i,2]
-            #else:
-                #Penaliza individual na classe negativa
-            #    evaluation[i].aval_norm = 1 + self.L1*aval_norma2[i,0] + self.L2*aval_norma2[i,1] + self.L3*aval_norma2[i,2]
-            evaluation[i].dist_norm = self.L2*aval_norma2[i,1] + self.L3*aval_norma2[i,2]
+            evaluation[i].dist_norm = self.L1*aval_norma2[i,0] + self.L2*aval_norma2[i,1]
         
             i = i + 1
     
@@ -150,21 +146,8 @@ class CSSE(object):
             #Penalizes the individual who is in the negative class
             if str(class_ind) == str(current_class):
                 predict_sum = predict_sum + 3
-                #print('ruim', current_class)
-            #else:
-            #    print('achei', class_ind, ind_cur_class, predict_sum + base_value)
             
             return predict_sum + base_value
-                
-            #Testar
-            #Penalizes the individual who is in the negative class
-            #if str(class_ind) == str(current_class):
-                #predict_sum = predict_sum + base_value
-                #print('ruim', predict_sum)
-            #else:
-                #predict_sum = 0
-                #print('achei', class_ind, ind_cur_class, predict_sum + base_value)
-            #return predict_sum
         
         #Calculates similarity to the original instance
         def getAvaliacaoDist (ind, X_train_minmax):
@@ -196,7 +179,7 @@ class CSSE(object):
             qtd = self.numChanges(population.loc[i])
         
             ind = individual(i, avaliacao, avaldist, qtd, 0, 0, predict[i])
-            aval_norma.append([avaliacao, avaldist, qtd])
+            aval_norma.append([avaldist, qtd, avaliacao])
             evaluation.append(ind)
             i = i + 1
 
@@ -294,14 +277,20 @@ class CSSE(object):
                 colums.append(counter_solution[j].column)
         
             return colums      
-        
+             
         #Checks if the new solution is contained in the solutions already found
-        def contained_solution(current_list, new_solution):
+        def contained_solution(original_instance, current_list, current_column_list, new_solution, new_column_solution):
             contained = False
-            
-            for pos in range (0, len(current_list)): 
-                if all(x in new_solution for x in current_list[pos]): 
-                    contained = True
+            #print('new_solution', new_solution)
+            for i in range (0, len(current_list)):              
+                if set(current_column_list[i]).issubset(new_column_solution):
+                    for j in range (0, len(current_list[i])):
+                        pos = new_column_solution.index(current_list[i][j].column)
+                        distancia_a = abs(original_instance[current_list[i][j].column] - current_list[i][j].value)
+                        distancia_b = abs(original_instance[current_list[i][j].column] - new_solution[pos].value)
+                        if distancia_b >= distancia_a:
+                            contained = True
+
             return contained
 
         contrafactual_ind = pd.DataFrame(columns=self.input_dataset.columns)
@@ -323,7 +312,7 @@ class CSSE(object):
                 
                 if ind_colums_change not in solution_colums_list:
                     #Check if one solution is a subset of the other
-                    if not contained_solution(solution_list, ind_changes):
+                    if not contained_solution(self.original_ind, solution_list, solution_colums_list, ind_changes, ind_colums_change):
                         #Include counterfactual in the list of examples of the final solution
                         contrafactual_ind.loc[len(contrafactual_ind)] = df.iloc[aval[i].index].copy()
                                 
@@ -333,10 +322,11 @@ class CSSE(object):
                         solution_colums_list.append(ind_colums_change)
                                         
                         numContraf = numContraf + 1
+                        #print('solution_list ', solution_list)
                     #else:
-                    #    print('is contained ', ind_changes)
+                        #print('is contained ', ind_changes)
                 #else:
-                #    print('repeated ', ind_changes)
+                    #print('repeated ', ind_changes)
                       
             i = i + 1
 

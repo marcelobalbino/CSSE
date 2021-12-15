@@ -37,8 +37,8 @@ def main():
 
     #Genetic Algorithm parameters
     num_gen = 30 #number of generations
-    pop_size = 100 #population size
-    per_elit = 0.1 #percentage of elitism
+    pop_size = 150 #population size
+    per_elit = 0.2 #percentage of elitism
     cros_proba = 0.8 #crossover probability
     mutation_proba = 0.1 #mutation probability
 

@@ -48,8 +48,8 @@ def main():
     mutation_proba = 0.1 #mutation probability
 
     #Weights of objective function metrics
-    L1 = 1 #lambda 1 - Weight related to distance for class of interest
-    L2 = 0 #lambda 2 - Weight related to distance for original instance
+    L1 = 0 #lambda 1 - Weight related to distance for class of interest
+    L2 = 1 #lambda 2 - Weight related to distance for original instance
     L3 = 1 #lambda 3 - Weight related to the amount of changes to generate the counterfactual
       
     #List that contains how many changes were necessary in the generation of each counterfactual
