@@ -103,16 +103,17 @@ class CSSE(object):
             while df.columns[index_a] in self.static_list:
                 index_a = rnd.randint( 0, self.input_dataset.columns.size - 1 )
             
-            #Mutation
-            mutant = self.original_ind.copy()
+            if len(features_domain[index_a]) > 1:
+                #Mutation
+                mutant = self.original_ind.copy()
 
-            new_value =  self.getMutationValue(mutant.iloc[index_a], index_a, features_domain)
+                new_value =  self.getMutationValue(mutant.iloc[index_a], index_a, features_domain)
             
-            mutant.iloc[index_a] = new_value[0]
+                mutant.iloc[index_a] = new_value[0]
 
-            ni = self.equal(mutant, df)
-            if ni == 0:
-                df.loc[len(df)] = mutant.copy()
+                ni = self.equal(mutant, df)
+                if ni == 0:
+                    df.loc[len(df)] = mutant.copy()
     
     #Complete the standardized proximity and similarity assessments for each individual
     def getAvaliacaoNormal(self, evaluation, aval_norma):
@@ -244,19 +245,20 @@ class CSSE(object):
             index_a = rnd.randint( 0, self.input_dataset.columns.size - 1 )
             while df.columns[index_a] in self.static_list:
                 index_a = rnd.randint( 0, self.input_dataset.columns.size - 1 )
-
-            #Mutation
-            mutant = df.iloc[individual_pos].copy()
             
-            #Draw the value to be changed
-            new_value =  self.getMutationValue(mutant.iloc[index_a], index_a, features_domain)  
-            mutant.iloc[index_a] = new_value[0]
+            if len(features_domain[index_a]) > 1:
+                #Mutation
+                mutant = df.iloc[individual_pos].copy()
+            
+                #Draw the value to be changed
+                new_value =  self.getMutationValue(mutant.iloc[index_a], index_a, features_domain)  
+                mutant.iloc[index_a] = new_value[0]
 
-            ni = self.equal(mutant, df)
-            if ni == 0:
-                df.loc[individual_pos] = mutant.copy()
-            #else:
-            #    print('repeated')
+                ni = self.equal(mutant, df)
+                if ni == 0:
+                    df.loc[individual_pos] = mutant.copy()
+                #else:
+                #    print('repeated')
      
     def getChanges(self, ind, dfComp):
         changes = []
@@ -365,7 +367,8 @@ class CSSE(object):
         if self.algorithm == 'Tree':
             explainerAG = shap.TreeExplainer(self.model)
         else:
-            explainerAG = shap.KernelExplainer(model.predict_proba, x_train)
+            X_train_summary = shap.kmeans(self.x_train, 10)
+            explainerAG = shap.KernelExplainer(self.model.predict_proba, X_train_summary)
         
         for g in range ( self.num_gen ):
             #print("GA generation ", g, "...")
