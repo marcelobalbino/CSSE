@@ -31,6 +31,8 @@ def main():
     #-------Begin Parameter Adjustment--------
     
     algorithm = 'Tree' #The current version of the method uses the Shap TreeExplainer for tree models and the KernelExplainer for all other algorithms
+    #You can use algorithm = 'Tree' for Decision Tree or Random Forest, algorithm = 'SVM' for SVM, algorithm = 'NN' for Neural Networks
+    
     X = 0 #Indicates the instance's position to be explained in the dataset
 
     #User preferences
