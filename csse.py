@@ -3,6 +3,8 @@ import random as rnd
 from scipy.spatial import distance
 import pandas as pd
 from sklearn import preprocessing
+import warnings
+import sys
 
 #Used for ordering evaluations
 class individual:
@@ -164,7 +166,9 @@ class CSSE(object):
             return dst
         
         base_value = explainerAG.expected_value[ind_cur_class]
-        shap_valuesAG = explainerAG.shap_values(population)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            shap_valuesAG = explainerAG.shap_values(population)
         predict = self.model.predict(population)
         
         #Calculating the distance between instances
@@ -368,10 +372,13 @@ class CSSE(object):
             explainerAG = shap.TreeExplainer(self.model)
         else:
             X_train_summary = shap.kmeans(self.x_train, 10)
-            explainerAG = shap.KernelExplainer(self.model.predict_proba, X_train_summary)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                explainerAG = shap.KernelExplainer(self.model.predict_proba, X_train_summary)
         
         for g in range ( self.num_gen ):
-            #print("GA generation ", g, "...")
+            if self.algorithm != 'Tree':
+                print("GA generation ", g + 1, " - SHAP execution...")
             #To use on the parents of each generation
             parents = pd.DataFrame(columns=self.input_dataset.columns)
     
