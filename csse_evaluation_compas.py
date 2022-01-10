@@ -36,9 +36,8 @@ def main():
 
     #-------Begin Parameter Adjustment--------
     
-    algorithm = 'Tree' #The current version of the method uses the Shap TreeExplainer for tree models and the KernelExplainer for all other algorithms
-    #You can use algorithm = 'Tree' for Decision Tree or Random Forest, algorithm = 'SVM' for SVM, algorithm = 'NN' for Neural Networks
-
+    TreeClassifier = True #The current version of the method uses the Shap TreeExplainer for tree models (Decision Tree, Random Forest) and the KernelExplainer for all other algorithms. Use 'True' for tree-based models and 'False' otherwise
+    
     #User preferences
     static_list = [] #List of features that cannot be changed
     K = 1 #Number of counterfactual explanations to be obtained
@@ -62,14 +61,14 @@ def main():
     count_solution = 0
     
     print('Number of decisions to be explained: ', len(x_test))
-    for X in range ( 0, len(x_test)): #X Indicates the instance's position to be explained in the dataset      
+    for X in range ( 0, len(x_test)): #X Indicates the instance's position to be explained in the dataset
         #copy the original instance
         original_instance = x_test.iloc[X].copy()   
         
      #-------End Parameter Adjustment--------   
         
         #Run CSSE
-        explainerCSSE = CSSE(original_instance, p[X], static_list, K, df[columns_tmp], x_train, model, num_gen, pop_size, per_elit, cros_proba, mutation_proba, L1, L2, L3, algorithm)
+        explainerCSSE = CSSE(original_instance, p[X], static_list, K, df[columns_tmp], x_train, model, num_gen, pop_size, per_elit, cros_proba, mutation_proba, L1, L2, L3, TreeClassifier)
     
         contrafactual_set, solution = explainerCSSE.explain()
                         

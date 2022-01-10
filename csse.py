@@ -33,7 +33,7 @@ class counter_change:
         
 class CSSE(object):
     
-    def __init__(self, original_ind, current_class, static_list, K, input_dataset, x_train, model, num_gen, pop_size, per_elit, cros_proba, mutation_proba, L1, L2, L3, algorithm):
+    def __init__(self, original_ind, current_class, static_list, K, input_dataset, x_train, model, num_gen, pop_size, per_elit, cros_proba, mutation_proba, L1, L2, L3, TreeClassifier):
         #User Options
         self.original_ind = original_ind #Original instance
         #self.ind_cur_class = ind_cur_class #Index in the shap corresponds to the original instance class
@@ -55,7 +55,8 @@ class CSSE(object):
         self.L2 = L2 #weight assigned the amount of changes needed in the original instance
         self.L3 = L3 #weight assigned to distance for counterfactual class
         #Algorithm
-        self.algorithm = algorithm
+        #The current version of the method uses the Shap TreeExplainer for tree models and the KernelExplainer for all other algorithms
+        self.TreeClassifier = TreeClassifier #Informs whether the model is tree-based (Use 'True' for tree-based models and 'False' otherwise)
            
     #Get which index in the SHAP corresponding to the current class
     def getBadClass(self):   
@@ -368,7 +369,7 @@ class CSSE(object):
         
         #Generates the SHAP explanation of model
         shap.initjs()
-        if self.algorithm == 'Tree':
+        if self.TreeClassifier == True:
             explainerAG = shap.TreeExplainer(self.model)
         else:
             X_train_summary = shap.kmeans(self.x_train, 10)
@@ -377,7 +378,7 @@ class CSSE(object):
                 explainerAG = shap.KernelExplainer(self.model.predict_proba, X_train_summary)
         
         for g in range ( self.num_gen ):
-            if self.algorithm != 'Tree':
+            if self.TreeClassifier != True:
                 print("GA generation ", g + 1, " - SHAP execution...")
             #To use on the parents of each generation
             parents = pd.DataFrame(columns=self.input_dataset.columns)
