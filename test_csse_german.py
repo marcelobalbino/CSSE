@@ -44,9 +44,9 @@ def main():
     mutation_proba = 0.1 #mutation probability
 
     #Weights of objective function metrics
-    L1 = 1 #lambda 1 - Weight related to distance for class of interest
-    L2 = 1 #lambda 2 - Weight related to distance for original instance
-    L3 = 1 #lambda 3 - Weight related to the amount of changes to generate the counterfactual
+    L1 = 1 #lambda 1 - Weight assigned the distance to the original instance
+    L2 = 1 #lambda 2 - Weight assigned the amount of changes needed in the original instance
+    L3 = 1 #lambda 3 - Weight assigned to distance for counterfactual class
 
     #copy the original instance
     original_instance = x_test.iloc[X].copy() 

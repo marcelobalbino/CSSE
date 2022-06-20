@@ -400,15 +400,12 @@ class CSSE(object):
             #Copies to the next generation the per_elit best individuals
             self.elitism(evaluation, df, parents)
             
-            i = len(df)
-            while i < self.pop_size + 1: #+1, as the 1st position is used to store the reference individual
+            while len(df) < self.pop_size + 1: #+1, as the 1st position is used to store the reference individual
                 self.crossover(df, parents, evaluation)
                 
                 mutation_op = rnd.random()
                 if mutation_op <= self.mutation_proba:
                     self.mutation(df, len(df) - 1, features_domain)
-                
-                i = i + 1
                  
         evaluation = []
     
