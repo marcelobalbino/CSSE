@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn import preprocessing
 import warnings
 import sys
+from tqdm import tqdm
 
 #Used for ordering evaluations
 class individual:
@@ -377,7 +378,7 @@ class CSSE(object):
                 warnings.simplefilter("ignore")
                 explainerAG = shap.KernelExplainer(self.model.predict_proba, X_train_summary)
         
-        for g in range ( self.num_gen ):
+        for g in tqdm(range(self.num_gen), desc= "Processing..."):
             if self.TreeClassifier != True:
                 print("GA generation ", g + 1, " - SHAP execution...")
             #To use on the parents of each generation
