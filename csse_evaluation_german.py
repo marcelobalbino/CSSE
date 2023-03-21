@@ -32,25 +32,21 @@ def main():
 
     print(classification_report(y_test, p))
 
-    #-------Begin Parameter Adjustment--------
-    
-    TreeClassifier = True #The current version of the method uses the Shap TreeExplainer for tree models (Decision Tree, Random Forest) and the KernelExplainer for all other algorithms. Use 'True' for tree-based models and 'False' otherwise
-  
+    #-------Begin Parameter Adjustment-------- 
     #User preferences
-    static_list = [] #List of features that cannot be changed
-    K = 1 #Number of counterfactual explanations to be obtained
+    #static_list = [] #List of features that cannot be changed
+    K = 3 #Number of counterfactual explanations to be obtained
 
     #Genetic Algorithm parameters
-    num_gen = 30 #number of generations
-    pop_size = 100 #population size
-    per_elit = 0.1 #percentage of elitism
-    cros_proba = 0.8 #crossover probability
-    mutation_proba = 0.1 #mutation probability
+    #num_gen = 30 #number of generations
+    #pop_size = 100 #population size
+    #per_elit = 0.1 #percentage of elitism
+    #cros_proba = 0.8 #crossover probability
+    #mutation_proba = 0.1 #mutation probability
 
     #Weights of objective function metrics
-    L1 = 0 #lambda 1 - Weight related to distance for class of interest
-    L2 = 1 #lambda 2 - Weight related to distance for original instance
-    L3 = 1 #lambda 3 - Weight related to the amount of changes to generate the counterfactual
+    #L1 = 0 #lambda 1 - Weight related to distance for class of interest
+    #L2 = 1 #lambda 2 - Weight related to distance for original instance
       
     #List that contains how many changes were necessary in the generation of each counterfactual
     change_list = []
@@ -58,33 +54,44 @@ def main():
     #Count number of cases where solution was found
     count_solution = 0
     
-    print('Number of decisions to be explained: ', len(x_test))
-    for X in range ( 0, len(x_test)): #X Indicates the instance's position to be explained in the dataset
-        #copy the original instance
-        original_instance = x_test.iloc[X].copy() 
-        
-     #-------End Parameter Adjustment--------   
-           
-        #Run CSSE
-        explainerCSSE = CSSE(original_instance, p[X], static_list, K, df[columns_tmp], x_train, model, num_gen, pop_size, per_elit, cros_proba, mutation_proba, L1, L2, L3, TreeClassifier)
+    #Defines how many instances of the test set will be used
+    num_inst = 100
+    print('Number of decisions to be explained: ', num_inst)
     
-        contrafactual_set, solution = explainerCSSE.explain()
+    for X in range ( 0, num_inst): #X Indicates the instance's position to be explained in the dataset
+        #copy the original instance
+        original_instance = x_test.iloc[X].copy()         
+     
+    #-------End Parameter Adjustment--------   
+        
+        #Print the original instance
+        print(original_instance)
+        print('\nGetting counterfactuals...\n')
+        
+        #Run CSSE
+        explainerCSSE = CSSE(df[columns_tmp], x_train, model)
+    
+        contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X])
                         
-        #Prints number of changes in counterfactual generation
+        #Prints the counterfactuals found
+        explainerCSSE.printResults(solution)    
+        
+        print('\nSummarizing results from instance ' + str(X + 1) + '\n')
         if len(solution) != 0:
-            n = len(solution[0])
-            print('Instance ' + str(X + 1) + ' - ' + str(n) + ' change(s)\n')
-            change_list.append(n)
-            count_solution = count_solution + 1
+            for y in range ( 0, len(solution)):
+                n = len(solution[y])
+                print('Instance ' + str(X + 1) + ' - ' + str(n) + ' change(s)\n')
+                change_list.append(n)
+                count_solution = count_solution + 1     
         else:
-            print('Instance ' + str(X + 1) + ' - solution not found')
-            print(original_instance)
-                         
+            print('Instance ' + str(X + 1) + ' - solution not found\n')
+                                
     print('Mean and standard deviation of the number of changes')
     print(f'Mean: {statistics.mean(change_list):.2f}')
     print(f'Standard deviation: {statistics.pstdev(change_list, mu=None):.2f}')
-        
-    method_effi = (count_solution/len(x_test))*100
+    
+    #method_effi = (count_solution/len(x_test))*100
+    method_effi = (count_solution/(num_inst*K))*100
     print(f'Method efficiency: {method_effi:.2f}')
     
 if __name__ == "__main__":
