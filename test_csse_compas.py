@@ -29,26 +29,23 @@ def main():
     print(classification_report(y_test, p))
 
     #-------Begin Parameter Adjustment--------
-    
-    TreeClassifier = True #The current version of the method uses the Shap TreeExplainer for tree models (Decision Tree, Random Forest) and the KernelExplainer for all other algorithms. Use 'True' for tree-based models and 'False' otherwise
-    
+       
     X = 0 #Indicates the instance's position to be explained in the dataset
 
     #User preferences
-    static_list = [] #List of features that cannot be changed. For example: static_list = ['age']
-    K = 3 #Number of counterfactual explanations to be obtained
+    #static_list = [] #List of features that cannot be changed. For example: static_list = ['age']
+    #K = 3 #Number of counterfactual explanations to be obtained
 
     #Genetic Algorithm parameters
-    num_gen = 30 #number of generations
-    pop_size = 150 #population size
-    per_elit = 0.2 #percentage of elitism
-    cros_proba = 0.8 #crossover probability
-    mutation_proba = 0.1 #mutation probability
+    #num_gen = 30 #number of generations
+    #pop_size = 150 #population size
+    #per_elit = 0.2 #percentage of elitism
+    #cros_proba = 0.8 #crossover probability
+    #mutation_proba = 0.1 #mutation probability
 
     #Weights of objective function metrics
-    L1 = 1 #lambda 1 - Weight assigned the distance to the original instance
-    L2 = 1 #lambda 2 - Weight assigned the amount of changes needed in the original instance
-    L3 = 1 #lambda 3 - Weight assigned to distance for counterfactual class
+    #L1 = 1 #lambda 1 - Weight assigned the distance to the original instance
+    #L2 = 1 #lambda 2 - Weight assigned the amount of changes needed in the original instance
 
     #copy the original instance
     original_instance = x_test.iloc[X].copy() 
@@ -60,9 +57,9 @@ def main():
     print('\nGetting counterfactuals...\n')
             
     #Run CSSE
-    explainerCSSE = CSSE(original_instance, p[X], static_list, K, df[columns_tmp], x_train, model, num_gen, pop_size, per_elit, cros_proba, mutation_proba, L1, L2, L3, TreeClassifier)
+    explainerCSSE = CSSE(df[columns_tmp], x_train, model)
     
-    contrafactual_set, solution = explainerCSSE.explain() #Method returns the list of counterfactuals and the explanations generated from them
+    contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X]) #Method returns the list of counterfactuals and the explanations generated from them
     
     #The method returns a list of counterfactual solutions, where each solution, in turn, is a change list (each change has the "column" and "value" to be changed). To implement another output format, see the "printResults" function
     explainerCSSE.printResults(solution)
