@@ -32,7 +32,7 @@ def main():
 
     #User preferences
     #static_list = [] #List of features that cannot be changed. For example: static_list = ['age']
-    #K = 3 #Number of counterfactual explanations to be obtained
+    K = 5 #Number of counterfactual explanations to be obtained
 
     #Genetic Algorithm parameters
     #num_gen = 30 #number of generations
@@ -54,8 +54,8 @@ def main():
     print(original_instance)
     print('\nGetting counterfactuals...\n')
             
-    #Run CSSE
-    explainerCSSE = CSSE(df[columns_tmp], x_train, model)
+    #Run CSSE - Method executed with default parameters except for the value of K.
+    explainerCSSE = CSSE(df[columns_tmp], x_train, model, K = K)
     
     contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X]) #Method returns the list of counterfactuals and the explanations generated from them
     

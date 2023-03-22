@@ -56,7 +56,7 @@ def main():
     print(original_instance)
     print('\nGetting counterfactuals...\n')
             
-    #Run CSSE
+    #Run CSSE - Method executed with default parameters
     explainerCSSE = CSSE(df[columns_tmp], x_train, model)
     
     contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X]) #Method returns the list of counterfactuals and the explanations generated from them

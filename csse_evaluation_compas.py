@@ -70,7 +70,7 @@ def main():
         print(original_instance)
         print('\nGetting counterfactuals...\n')
         
-        #Run CSSE
+        #Run CSSE - Method executed with default parameters
         explainerCSSE = CSSE(df[columns_tmp], x_train, model)
     
         contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X])
@@ -82,7 +82,7 @@ def main():
         if len(solution) != 0:
             for y in range ( 0, len(solution)):
                 n = len(solution[y])
-                print('Instance ' + str(X + 1) + ' - ' + str(n) + ' change(s)\n')
+                print('Counterfactual ' + str(y + 1) + ' - ' + str(n) + ' change(s)\n')
                 change_list.append(n)
                 count_solution = count_solution + 1     
         else:
@@ -92,9 +92,9 @@ def main():
     print(f'Mean: {statistics.mean(change_list):.2f}')
     print(f'Standard deviation: {statistics.pstdev(change_list, mu=None):.2f}')
     
-    #method_effi = (count_solution/len(x_test))*100
     method_effi = (count_solution/(num_inst*K))*100
-    print(f'Method efficiency: {method_effi:.2f}')
+    #Efficacy measures the percentage of counterfactuals obtained concerning the expected total number (num_ins * K).
+    print(f'Method efficacy: {method_effi:.2f}')
     
 if __name__ == "__main__":
     main()
