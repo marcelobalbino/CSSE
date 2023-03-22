@@ -55,7 +55,7 @@ def main():
     count_solution = 0
     
     #Defines how many instances of the test set will be used
-    num_inst = 100
+    num_inst = len(x_test)
     print('Number of decisions to be explained: ', num_inst)
     
     for X in range ( 0, num_inst): #X Indicates the instance's position to be explained in the dataset
