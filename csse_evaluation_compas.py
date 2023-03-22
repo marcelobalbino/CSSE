@@ -67,6 +67,7 @@ def main():
     #-------End Parameter Adjustment--------   
         
         #Print the original instance
+        print('# Original instance ' + str(X + 1) + ' - Class ' + str(p[X]) + ' #\n')
         print(original_instance)
         print('\nGetting counterfactuals...\n')
         
