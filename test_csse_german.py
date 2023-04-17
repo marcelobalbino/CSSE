@@ -37,7 +37,7 @@ def main():
     #Genetic Algorithm parameters
     #num_gen = 30 #number of generations
     #pop_size = 150 #population size
-    #per_elit = 0.2 #percentage of elitism
+    #per_elit = 0.1 #percentage of elitism
     #cros_proba = 0.8 #crossover probability
     #mutation_proba = 0.1 #mutation probability
 
@@ -55,7 +55,7 @@ def main():
     print('\nGetting counterfactuals...\n')
             
     #Run CSSE - Method executed with default parameters except for the value of K.
-    explainerCSSE = CSSE(df[columns_tmp], x_train, model, K = K)
+    explainerCSSE = CSSE(df[columns_tmp], model, K = K)
     
     contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X]) #Method returns the list of counterfactuals and the explanations generated from them
     
