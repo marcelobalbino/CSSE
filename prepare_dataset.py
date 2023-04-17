@@ -19,8 +19,8 @@ def prepare_compas_dataset(filename, path_data):
 
     df['days_b_screening_arrest'] = np.abs(df['days_b_screening_arrest'])
 
-    df['c_jail_out'] = pd.to_datetime(df['c_jail_out'])
-    df['c_jail_in'] = pd.to_datetime(df['c_jail_in'])
+    df['c_jail_out'] = pd.to_datetime(df['c_jail_out'], dayfirst=True)
+    df['c_jail_in'] = pd.to_datetime(df['c_jail_in'], dayfirst=True)
     df['length_of_stay'] = (df['c_jail_out'] - df['c_jail_in']).dt.days
     df['length_of_stay'] = np.abs(df['length_of_stay'])
 

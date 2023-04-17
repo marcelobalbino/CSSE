@@ -59,13 +59,12 @@ class feature_range:
         
 class CSSE(object):
     
-    def __init__(self, input_dataset, x_train, model, static_list = [], K = 3, num_gen = 30, pop_size = 100, per_elit = 0.1, cros_proba = 0.8, mutation_proba = 0.1, L1 = 1, L2 = 1):
+    def __init__(self, input_dataset, model, static_list = [], K = 3, num_gen = 30, pop_size = 100, per_elit = 0.1, cros_proba = 0.8, mutation_proba = 0.1, L1 = 1, L2 = 1):
         #User Options
         self.static_list = static_list #List of static features
         self.K = K #Number of counterfactuals desired
         #Model
         self.input_dataset = input_dataset
-        self.x_train = x_train
         self.model = model
         #GA Parameters
         self.num_gen = num_gen
@@ -75,10 +74,7 @@ class CSSE(object):
         self.mutation_proba = mutation_proba
         #Objective function parameters
         self.L1 = L1 #weight assigned the distance to the original instance
-        self.L2 = L2 #weight assigned the amount of changes needed in the original instance
-        #self.L3 = L3 #weight assigned to distance for counterfactual class
-        #Algorithm
-        #The current version of the method uses the Shap TreeExplainer for tree models and the KernelExplainer for all other algorithms   
+        self.L2 = L2 #weight assigned the number of changes needed in the original instance   
     
     #Get which index in the SHAP corresponding to the current class
     def getBadClass(self):   
@@ -156,7 +152,7 @@ class CSSE(object):
                         number_repetitions = 0
     
     #Complete the standardized proximity and similarity assessments for each individual
-    def getAvaliacaoNormal(self, evaluation, aval_norma):
+    def getNormalEvaluation(self, evaluation, aval_norma):
         scaler2 = preprocessing.MinMaxScaler()
         aval_norma2 = scaler2.fit_transform(aval_norma)
     
@@ -176,7 +172,7 @@ class CSSE(object):
         return num
         
     def fitness(self, population, evaluation, ind_cur_class):
-        def getAvaliacao (proba):
+        def getProximityEvaluation (proba):
             #Penalizes the individual who is in the negative class
             if proba < 0.5:
                 predict_score = 0
@@ -186,7 +182,7 @@ class CSSE(object):
             return predict_score
                
         #Calculates similarity to the original instance
-        def getAvaliacaoDist (ind, X_train_minmax):
+        def getEvaluationDist (ind, X_train_minmax):
             #Normalizes the data so that the different scales do not bias the distance
             a = X_train_minmax[0]
             b = X_train_minmax[ind]
@@ -194,14 +190,11 @@ class CSSE(object):
   
             return dst
         
-        #base_value = self.explainerAG.expected_value[ind_cur_class]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            #shap_valuesAG = self.explainerAG.shap_values(population)
         
             predict_proba = self.model.predict_proba(population)
-            #predict = self.model.predict(population)
-        
+                    
         #Calculating the distance between instances
         scaler = preprocessing.MinMaxScaler()
         X_train_minmax = scaler.fit_transform(population)
@@ -209,43 +202,42 @@ class CSSE(object):
         i = 0
         aval_norma = [] 
         while i < len(population):
-            avaliacao = getAvaliacao(predict_proba[i, ind_cur_class])
-            avaldist = getAvaliacaoDist(i, X_train_minmax)
+            proximityEvaluation = getProximityEvaluation(predict_proba[i, ind_cur_class])
+            evaldist = getEvaluationDist(i, X_train_minmax)
             #The original individual is in the 1st position
-            qtd = self.numChanges(population.loc[i])
+            numChanges = self.numChanges(population.loc[i])
         
-            ind = individual(i, avaliacao, avaldist, qtd, 0, 0, predict_proba[i, ind_cur_class])
-            aval_norma.append([avaldist, qtd, avaliacao])
+            ind = individual(i, proximityEvaluation, evaldist, numChanges, 0, 0, predict_proba[i, ind_cur_class])
+            aval_norma.append([evaldist, numChanges, proximityEvaluation])
             evaluation.append(ind)
             i = i + 1
 
-        self.getAvaliacaoNormal(evaluation, aval_norma)
+        self.getNormalEvaluation(evaluation, aval_norma)
+       
+    #Given a counterfactual solution returns the list of modified columns
+    def getColumns(self, counter_solution):
+        colums = []
+        for j in range (0, len(counter_solution)):
+            colums.append(counter_solution[j].column)
         
-    def elitism(self, evaluation, df, parents):
-        
-        #Given a counterfactual solution returns the list of modified columns
-        def getColumns(counter_solution):
-            colums = []
-            for j in range (0, len(counter_solution)):
-                colums.append(counter_solution[j].column)
-        
-            return colums      
+        return colums      
              
-        #Checks if the new solution is contained in the solutions already found
-        def contained_solution(original_instance, current_list, current_column_list, new_solution, new_column_solution):
-            contained = False
-            #print('new_solution', new_solution)
-            for i in range (0, len(current_list)):              
-                if set(current_column_list[i]).issubset(new_column_solution):
-                    for j in range (0, len(current_list[i])):
-                        pos = new_column_solution.index(current_list[i][j].column)
-                        distancia_a = abs(original_instance[current_list[i][j].column] - current_list[i][j].value)
-                        distancia_b = abs(original_instance[current_list[i][j].column] - new_solution[pos].value)
-                        if distancia_b >= distancia_a:
-                            contained = True
+    #Checks if the new solution is contained in the solutions already found
+    def contained_solution(self, original_instance, current_list, current_column_list, new_solution, new_column_solution):
+        contained = False
+        for i in range (0, len(current_list)):              
+            if set(current_column_list[i]).issubset(new_column_solution):
+                for j in range (0, len(current_list[i])):
+                    pos = new_column_solution.index(current_list[i][j].column)
+                    distancia_a = abs(original_instance[current_list[i][j].column] - current_list[i][j].value)
+                    distancia_b = abs(original_instance[current_list[i][j].column] - new_solution[pos].value)
+                    if distancia_b >= distancia_a:
+                        contained = True
 
-            return contained
-
+        return contained
+      
+    def elitism(self, evaluation, df, parents):
+         
         num_elit = round(self.per_elit*self.pop_size)
         
         aval = []
@@ -267,11 +259,11 @@ class CSSE(object):
                 #Gets counterfactual example change list
                 ind_changes = self.getChanges(aval[i].index, parents)
                 #Generates the list of columns modified in the counterfactual to check if there is already a solution with that set of columns
-                ind_colums_change = getColumns(ind_changes)
+                ind_colums_change = self.getColumns(ind_changes)
                 
                 if ind_colums_change not in solution_colums_list:
                     #Check if one solution is a subset of the other
-                    if not contained_solution(self.original_ind, solution_list, solution_colums_list, ind_changes, ind_colums_change):
+                    if not self.contained_solution(self.original_ind, solution_list, solution_colums_list, ind_changes, ind_colums_change):
                         #Include counterfactual in the list of examples of the final solution                    
                         df.loc[len(df)] = parents.iloc[aval[i].index].copy()                     
                                 
@@ -366,31 +358,9 @@ class CSSE(object):
 
         return changes
     
+    #Generates the solution from the final population
     def getContrafactual(self, df, aval):
         
-        #Given a counterfactual solution returns the list of modified columns
-        def getColumns(counter_solution):
-            colums = []
-            for j in range (0, len(counter_solution)):
-                colums.append(counter_solution[j].column)
-        
-            return colums      
-             
-        #Checks if the new solution is contained in the solutions already found
-        def contained_solution(original_instance, current_list, current_column_list, new_solution, new_column_solution):
-            contained = False
-            #print('new_solution', new_solution)
-            for i in range (0, len(current_list)):              
-                if set(current_column_list[i]).issubset(new_column_solution):
-                    for j in range (0, len(current_list[i])):
-                        pos = new_column_solution.index(current_list[i][j].column)
-                        distancia_a = abs(original_instance[current_list[i][j].column] - current_list[i][j].value)
-                        distancia_b = abs(original_instance[current_list[i][j].column] - new_solution[pos].value)
-                        if distancia_b >= distancia_a:
-                            contained = True
-
-            return contained
-
         contrafactual_ind = pd.DataFrame(columns=self.input_dataset.columns)
         solution_list = []
         solution_colums_list = []
@@ -406,11 +376,11 @@ class CSSE(object):
                 #Gets counterfactual example change list
                 ind_changes = self.getChanges(aval[i].index, df)
                 #Generates the list of columns modified in the counterfactual to check if there is already a solution with that set of columns
-                ind_colums_change = getColumns(ind_changes)
+                ind_colums_change = self.getColumns(ind_changes)
                 
                 if ind_colums_change not in solution_colums_list:
                     #Check if one solution is a subset of the other
-                    if not contained_solution(self.original_ind, solution_list, solution_colums_list, ind_changes, ind_colums_change):
+                    if not self.contained_solution(self.original_ind, solution_list, solution_colums_list, ind_changes, ind_colums_change):
                         #Include counterfactual in the list of examples of the final solution
                         contrafactual_ind.loc[len(contrafactual_ind)] = df.iloc[aval[i].index].copy()
                                 
@@ -440,26 +410,7 @@ class CSSE(object):
                     print(f"{str(solution[i][j].column):<29} {str(solution[i][j].value):>5}")
         else:
             print('Solution not found. It may be necessary to adjust the parameters for this instance.')
-            
-
-    def sendResultsToTxt(self, original_instance, solution, output_path, blackbox, dataset_name, total_time):
-        with open(output_path, 'a') as file:
-            file.write('\nContrafactual: CSSE\n')
-            file.write('BlackBox: '+blackbox + '\n')
-            file.write('Dataset: '+dataset_name+'\n')
-            file.write('Total time (s): ' + str(total_time) + '\n')
-            #file.write('Original instance:\n')
-            #file.write(original_instance.values + '\n')
-            
-            if len(solution) != 0:
-                for i in range(0, len(solution)):
-                    file.write("\n")
-                    file.write(f"{'Counterfactual ' + str(i + 1):^34}\n")
-                    for j in range(0, len(solution[i])):
-                        file.write(f"{str(solution[i][j].column):<29} {str(solution[i][j].value):>5}\n")
-            else:
-                file.write('Solution not found. It may be necessary to adjust the parameters for this instance.\n')
-                                     
+                                                 
     def explain(self, original_ind, current_class):
         self.original_ind = original_ind #Original instance
         #self.ind_cur_class = ind_cur_class #Index in the shap corresponds to the original instance class

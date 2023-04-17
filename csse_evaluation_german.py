@@ -12,7 +12,7 @@ from csse import CSSE
 from prepare_dataset import *
 
 def main():
-    print('This experiment can take a long time, depending on the number of decisions to explain. To reduce time, adjust the "test_size" in the rating model.\n')
+    print('This experiment can take a long time, depending on the number of decisions to explain. To reduce time, adjust the variable "num_inst".\n')
     
     # Read Dataset German
     df = prepare_german_dataset("german_credit.csv", "./German/")
@@ -35,7 +35,7 @@ def main():
     #-------Begin Parameter Adjustment-------- 
     #User preferences
     #static_list = [] #List of features that cannot be changed
-    K = 3 #Number of counterfactual explanations to be obtained
+    #K = 3 #Number of counterfactual explanations to be obtained
 
     #Genetic Algorithm parameters
     #num_gen = 30 #number of generations
@@ -55,7 +55,9 @@ def main():
     count_solution = 0
     
     #Defines how many instances of the test set will be used
-    num_inst = len(x_test)
+    #num_inst = len(x_test)
+    #Running the method with 100 instances of the test set
+    num_inst = 5
     print('Number of decisions to be explained: ', num_inst)
     
     for X in range ( 0, num_inst): #X Indicates the instance's position to be explained in the dataset
@@ -70,7 +72,7 @@ def main():
         print('\nGetting counterfactuals...\n')
         
         #Run CSSE - Method executed with default parameters.
-        explainerCSSE = CSSE(df[columns_tmp], x_train, model)
+        explainerCSSE = CSSE(df[columns_tmp], model)
     
         contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X])
                         
@@ -91,9 +93,9 @@ def main():
     print(f'Mean: {statistics.mean(change_list):.2f}')
     print(f'Standard deviation: {statistics.pstdev(change_list, mu=None):.2f}')
     
-    method_effi = (count_solution/(num_inst*K))*100
+    #method_effi = (count_solution/(num_inst*K))*100
     #Efficacy measures the percentage of counterfactuals obtained concerning the expected total number (num_ins * K).
-    print(f'Method efficacy: {method_effi:.2f}')
+    #print(f'Method efficacy: {method_effi:.2f}')
     
 if __name__ == "__main__":
     main()
