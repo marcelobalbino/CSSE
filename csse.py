@@ -59,10 +59,12 @@ class feature_range:
         
 class CSSE(object):
     
-    def __init__(self, input_dataset, model, static_list = [], K = 3, num_gen = 30, pop_size = 100, per_elit = 0.1, cros_proba = 0.8, mutation_proba = 0.1, L1 = 1, L2 = 1):
+    def __init__(self, input_dataset, model, static_list = [], K = 3, num_gen = 30, pop_size = 100, per_elit = 0.1, cros_proba = 0.8, mutation_proba = 0.1, L1 = 1, L2 = 1, one_hot_lists = []):
         #User Options
         self.static_list = static_list #List of static features
         self.K = K #Number of counterfactuals desired
+        self.one_hot_lists = one_hot_lists
+        
         #Model
         self.input_dataset = input_dataset
         self.model = model
@@ -74,7 +76,10 @@ class CSSE(object):
         self.mutation_proba = mutation_proba
         #Objective function parameters
         self.L1 = L1 #weight assigned the distance to the original instance
-        self.L2 = L2 #weight assigned the number of changes needed in the original instance   
+        self.L2 = L2 #weight assigned the number of changes needed in the original instance 
+        
+        # Build the logical genes from the input dataset
+        self.genes = self.getGenes()
     
     #Get which index in the SHAP corresponding to the current class
     def getBadClass(self):   
@@ -84,6 +89,37 @@ class CSSE(object):
             ind_cur_class = 1
         
         return ind_cur_class
+    
+    def getGenes(self):
+        genes = []
+        used_columns = []
+
+        for column in self.input_dataset.columns:
+            if column in used_columns:
+                continue
+
+            gene = [column]
+
+            # When the first column of a One-Hot encoded group is found,
+            # add all columns from that group to the same gene.
+            # The remaining columns will be skipped because they are marked as used.
+            for one_hot_list in self.one_hot_lists:
+                if column in one_hot_list:
+                    gene = []
+
+                    # Preserve the original column order from the input dataset within the One-Hot encoded gene.
+                    for col in self.input_dataset.columns:
+                        if col in one_hot_list:
+                            gene.append(col)
+
+                    break
+
+            genes.append(gene)
+
+            # Add all columns from the current gene to the list of already processed columns.
+            used_columns.extend(gene)
+
+        return genes
     
     #Gets the valid values range for each feature
     def getFeaturesRange(self):
@@ -108,6 +144,33 @@ class CSSE(object):
         
         return new_value
     
+    def getGeneMutationValue(self, gene, mutant, features_range):
+        if len(gene) == 1:
+            # The gene contains a single column.
+            # Use the original mutation logic.
+            column_index = self.input_dataset.columns.get_loc(gene[0])
+
+            return self.getMutationValue(mutant.iloc[column_index], column_index, features_range[column_index])
+        else:
+            # The gene contains multiple columns and represents
+            # a One-Hot encoded feature.
+            current_value = list(mutant[gene])
+
+            # Find the position of the value 1 in the One-Hot encoded vector.
+            current_index = current_value.index(1)
+
+            # Draw a different category.
+            new_index = rnd.randint(0, len(gene) - 1)
+
+            while new_index == current_index:
+                new_index = rnd.randint(0, len(gene) - 1)
+
+            # Create the new One-Hot value.
+            new_value = [0] * len(gene) # Create a new One-Hot vector with 0 in all positions.
+            new_value[new_index] = 1
+
+            return new_value
+    
     def equal(self, individual, population):
         aux = 0
         for i in range ( 1, len(population)):
@@ -117,7 +180,31 @@ class CSSE(object):
                 aux = 1
         
         return aux
+    
+    def isStaticGene(self, gene):
+        for static_item in self.static_list:
+            if isinstance(static_item, list):
+                # Convert both lists to sets so the comparison does not depend
+                # on the order in which the One-Hot columns were provided.
+                # For example, ['race_0', 'race_1', 'race_2'] and
+                # ['race_2', 'race_0', 'race_1'] represent the same group.
+                if set(gene) == set(static_item):
+                    return True
+            else:
+                # Preserve compatibility with the original static_list format,
+                # where each static feature was specified as a single column name.
+                if len(gene) == 1 and gene[0] == static_item:
+                    return True
 
+        return False
+
+    def isMutableGene(self, gene, features_range):
+        if len(gene) == 1:
+            column_index = self.input_dataset.columns.get_loc(gene[0])
+            return not features_range[column_index].unique_value()
+        else:
+            return True
+    
     def getPopInicial (self, df, features_range): 
         #The reference individual will always be in the 0 position of the df - so that it is normalized as well (it will be used later in the distance function)
         df.loc[0] = self.original_ind.copy()
@@ -127,17 +214,18 @@ class CSSE(object):
         
         #One more position is used because the zero position was reserved for the reference individual
         while len(df) < self.pop_size + 1:
-            #Draw a feature to change
-            index_a = rnd.randint( 0, self.input_dataset.columns.size - 1 )
-            while df.columns[index_a] in self.static_list:
-                index_a = rnd.randint( 0, self.input_dataset.columns.size - 1 )
+            # Draw a gene to change
+            gene_index = rnd.randint(0, len(self.genes) - 1)
+            while self.isStaticGene(self.genes[gene_index]):
+                gene_index = rnd.randint(0, len(self.genes) - 1)
             
-            if not features_range[index_a].unique_value():
+            if self.isMutableGene(self.genes[gene_index], features_range):
                 #Mutation
                 mutant = self.original_ind.copy()
+                
+                new_value = self.getGeneMutationValue(self.genes[gene_index], mutant, features_range)
 
-                new_value =  self.getMutationValue(mutant.iloc[index_a], index_a, features_range[index_a])
-                mutant.iloc[index_a] = new_value
+                mutant[self.genes[gene_index]] = new_value
 
                 ni = self.equal(mutant, df)
                 if ni == 0:
@@ -293,34 +381,52 @@ class CSSE(object):
         
         return i
             
-    def crossover (self, df, parents, evaluation, number_cross_repetitions):
-        child = []
-            
-        corte = rnd.randint( 0, self.input_dataset.columns.size - 1 )
-            
+    def crossover (self, df, parents, evaluation, number_cross_repetitions):           
+        # Draw the crossover point between genes
+        corte = rnd.randint(0, len(self.genes))
+        
+        # Convert the gene position to the corresponding column position
+        column_cut = 0
+
+        for i in range(corte):
+            # Add the number of columns of each gene before the crossover point
+            column_cut += len(self.genes[i])
+        
+        # Select the first parent using the roulette wheel
         index1 = self.roulette_wheel(evaluation)
+        # Select the second parent using the roulette wheel
         index2 = self.roulette_wheel(evaluation)
         
+        # Get the individuals selected as parents
         ind_a = parents.iloc[index1].copy()
         ind_b = parents.iloc[index2].copy()
-            
+        
+        # Decide whether the crossover operation will be performed
         crossover_op = rnd.random()
         if crossover_op <= self.cros_proba:
-            child[ :corte ] = ind_a[ :corte ].copy()
-            child[ corte: ] = ind_b[ corte: ].copy()
+            # Start the child as a copy of the first parent
+            child = ind_a.copy()
+            
+            # Replace the part after the crossover point with the second parent's values
+            child.iloc[column_cut:] = ind_b.iloc[column_cut:].copy()
         else:
+            # If crossover is not performed, keep a copy of the first parent
             child = ind_a.copy()
         
         ni = self.equal(child, df)
         if ni == 0:
             df.loc[len(df)] = child.copy()
         else:
-            #Assesses whether the GA is producing too many repeated individuals.
+            # Assesses whether the GA is producing too many repeated individuals.
             number_cross_repetitions = number_cross_repetitions + 1
             if number_cross_repetitions == self.pop_size:
+                # Reduce the population size when too many repetitions occur
                 self.pop_size = round(self.pop_size - self.pop_size*0.1)
+                # Increase the mutation probability
                 self.mutation_proba = self.mutation_proba + 0.1
+                
                 #print('Adjusting population size...', self.pop_size)
+                # Reset the repetition counter
                 number_cross_repetitions = 0
         #    print('repeated')
         return number_cross_repetitions
@@ -329,18 +435,19 @@ class CSSE(object):
         ni = 1
         #Does not allow repeated individual
         while ni == 1:
-            #Draw a feature to change
-            index_a = rnd.randint( 0, self.input_dataset.columns.size - 1 )
-            while df.columns[index_a] in self.static_list:
-                index_a = rnd.randint( 0, self.input_dataset.columns.size - 1 )
+            # Draw a gene to change
+            gene_index = rnd.randint(0, len(self.genes) - 1)
             
-            if not features_range[index_a].unique_value():
+            while self.isStaticGene(self.genes[gene_index]):
+                gene_index = rnd.randint(0, len(self.genes) - 1)
+            
+            if self.isMutableGene(self.genes[gene_index], features_range):
                 #Mutation
                 mutant = df.iloc[individual_pos].copy()
             
-                #Draw the value to be changed
-                new_value =  self.getMutationValue(mutant.iloc[index_a], index_a, features_range[index_a])  
-                mutant.iloc[index_a] = new_value
+                # Generate a new value for the selected gene
+                new_value = self.getGeneMutationValue(self.genes[gene_index], mutant, features_range)
+                mutant[self.genes[gene_index]] = new_value
 
                 ni = self.equal(mutant, df)
                 if ni == 0:
