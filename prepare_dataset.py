@@ -37,16 +37,12 @@ def prepare_compas_dataset(filename, path_data):
             return 'High'
     df['class'] = df['decile_score'].apply(get_class)
 
-    #Race discretization
-    race = df['race']
-    label_encoder = preprocessing.LabelEncoder()
-    race_disc = label_encoder.fit_transform(race)
-    df['race_d'] = race_disc
-    del df['race']
-    df['race'] = df['race_d']
-    del df['race_d']
+    # Race one-hot encoding
+    race_dummies = pd.get_dummies(df['race'], prefix='race', dtype=int)
+    df = pd.concat([df.drop(columns=['race']), race_dummies], axis=1)
 
-    #Sex discretization
+    # Sex discretization
+    label_encoder = preprocessing.LabelEncoder()
     sex = df['sex']
     sex_disc = label_encoder.fit_transform(sex)
     df['sex_d'] = sex_disc
@@ -54,13 +50,8 @@ def prepare_compas_dataset(filename, path_data):
     df['sex'] = df['sex_d']
     del df['sex_d']
 
-    #c_charge_degree discretization
-    c_charge_degree = df['c_charge_degree']
-    c_charge_degree_disc = label_encoder.fit_transform(c_charge_degree)
-    df['c_charge_degree_d'] = c_charge_degree_disc
-    del df['c_charge_degree']
-    df['c_charge_degree'] = df['c_charge_degree_d']
-    del df['c_charge_degree_d']
+    # c_charge_degree discretization
+    df['c_charge_degree'] = label_encoder.fit_transform(df['c_charge_degree'])
 
     del df['c_jail_in']
     del df['c_jail_out']

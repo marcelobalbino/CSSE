@@ -35,6 +35,12 @@ def main():
     print(classification_report(y_test, p))
 
     #-------Begin Parameter Adjustment-------- 
+    
+    #This parameter should be used to specify the features encoded using One-Hot encoding.
+    one_hot_lists = [ 
+                      ['race_African-American', 'race_Asian', 'race_Caucasian', 'race_Hispanic', 'race_Native American', 'race_Other']
+                    ]
+    
     #User preferences
     #static_list = [] #List of features that cannot be changed
     #K = 3 #Number of counterfactual explanations to be obtained
@@ -74,7 +80,7 @@ def main():
         print('\nGetting counterfactuals...\n')
         
         #Run CSSE - Method executed with default parameters
-        explainerCSSE = CSSE(df[columns_tmp], model)
+        explainerCSSE = CSSE(df[columns_tmp], model, one_hot_lists = one_hot_lists)
     
         contrafactual_set, solution = explainerCSSE.explain(original_instance, p[X])
                         
